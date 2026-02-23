@@ -16,7 +16,7 @@ export default function Navbar() {
       <div className="nav-container">
 
         <div className="nav-logo">
-          CareerAssess
+          Career Compass
         </div>
 
         <div className="nav-links">
