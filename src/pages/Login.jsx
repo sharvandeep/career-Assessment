@@ -12,6 +12,31 @@ export default function Login() {
     email: "",
     password: ""
   });
+  const [captchaQuestion, setCaptchaQuestion] = useState("");
+  const [captchaAnswer, setCaptchaAnswer] = useState("");
+  const [captchaInput, setCaptchaInput] = useState("");
+  const [captchaError, setCaptchaError] = useState("");
+
+  const generateCaptcha = () => {
+    const captchaChars = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+    const captchaLength = 6;
+    let text = "";
+
+    for (let i = 0; i < captchaLength; i += 1) {
+      const randomIndex = Math.floor(Math.random() * captchaChars.length);
+      text += captchaChars[randomIndex];
+    }
+
+    setCaptchaQuestion(text);
+    setCaptchaAnswer(text);
+    setCaptchaInput("");
+    setCaptchaError("");
+  };
+
+  const handleRoleSelect = (role) => {
+    setSelectedRole(role);
+    generateCaptcha();
+  };
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -21,7 +46,13 @@ export default function Login() {
     e.preventDefault();
 
     if (!selectedRole) {
-      alert("Please select Student or Faculty");
+      alert("Please select a role");
+      return;
+    }
+
+    if (captchaInput.trim().toUpperCase() !== captchaAnswer) {
+      setCaptchaError("Captcha verification failed. Please try again.");
+      generateCaptcha();
       return;
     }
 
@@ -32,12 +63,22 @@ export default function Login() {
       });
 
       const user = res.data;
+      const userRole = String(user?.role || "").toUpperCase();
+
+      if (userRole !== selectedRole) {
+        localStorage.removeItem("user");
+        alert("Selected role does not match these credentials.");
+        return;
+      }
+
       localStorage.setItem("user", JSON.stringify(user));
 
-      if (user.role === "STUDENT") {
+      if (userRole === "STUDENT") {
         navigate("/student-dashboard");
-      } else if (user.role === "FACULTY") {
+      } else if (userRole === "FACULTY") {
         navigate("/faculty-dashboard");
+      } else if (userRole === "ADMIN") {
+        navigate("/admin-dashboard");
       }
 
     } catch {
@@ -50,7 +91,7 @@ export default function Login() {
 
       {/* LEFT PANEL */}
       <div className="auth-left">
-        <h1>CareerAssess</h1>
+        <h1>Career-Compass</h1>
         <p>
           Discover your strengths.  
           Analyze your skills.  
@@ -68,12 +109,12 @@ export default function Login() {
             Select your role to continue
           </p>
 
-          {/* TWO ROLE CARDS */}
+          {/* THREE ROLE CARDS */}
           <div className="role-selection">
 
             <div
               className={`role-card ${selectedRole === "STUDENT" ? "active" : ""}`}
-              onClick={() => setSelectedRole("STUDENT")}
+              onClick={() => handleRoleSelect("STUDENT")}
             >
               <div className="role-icon">🎓</div>
               <h4>Student</h4>
@@ -82,24 +123,35 @@ export default function Login() {
 
             <div
               className={`role-card ${selectedRole === "FACULTY" ? "active" : ""}`}
-              onClick={() => setSelectedRole("FACULTY")}
+              onClick={() => handleRoleSelect("FACULTY")}
             >
               <div className="role-icon">👨‍🏫</div>
               <h4>Faculty</h4>
               <p>Create & manage assessments</p>
             </div>
 
+            <div
+              className={`role-card ${selectedRole === "ADMIN" ? "active" : ""}`}
+              onClick={() => handleRoleSelect("ADMIN")}
+            >
+              <div className="role-icon">⚙️</div>
+              <h4>Admin</h4>
+              <p>Manage platform & users</p>
+            </div>
+
           </div>
 
           {/* FORM APPEARS AFTER SELECT */}
           {selectedRole && (
-            <form onSubmit={handleSubmit} className="auth-form fade-in">
+            <form onSubmit={handleSubmit} className="auth-form fade-in" autoComplete="off">
 
               <input
                 type="text"
                 name="email"
                 placeholder="Enter Email"
+                value={form.email}
                 onChange={handleChange}
+                autoComplete="off"
                 required
               />
 
@@ -107,9 +159,41 @@ export default function Login() {
                 type="password"
                 name="password"
                 placeholder="Enter Password"
+                value={form.password}
                 onChange={handleChange}
+                autoComplete="new-password"
                 required
               />
+
+              <div className="captcha-box">
+                <div className="captcha-challenge">
+                  <span className="captcha-label">Captcha:</span>
+                  <strong className="captcha-question">{captchaQuestion}</strong>
+                  <button
+                    type="button"
+                    className="captcha-refresh"
+                    onClick={generateCaptcha}
+                  >
+                    Refresh
+                  </button>
+                </div>
+
+                <input
+                  type="text"
+                  name="captcha"
+                  placeholder="Enter captcha letters"
+                  value={captchaInput}
+                  onChange={(e) => {
+                    setCaptchaInput(e.target.value);
+                    if (captchaError) {
+                      setCaptchaError("");
+                    }
+                  }}
+                  required
+                />
+
+                {captchaError && <p className="captcha-error">{captchaError}</p>}
+              </div>
 
               <button type="submit" className="auth-btn">
                 Login as {selectedRole}
